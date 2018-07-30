@@ -1,0 +1,2997 @@
+#include "mainwindow.h"
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+{
+    scene = new QGraphicsScene(this);
+    scene->setSceneRect(0, 0, WIDTH, HEIGHT);
+    view = new QGraphicsView(scene, this);
+    controller = new gameController(*scene, this);
+
+    view->setBackgroundBrush(QPixmap(":/resource/Resource/background.png"));
+    view->setViewport(new QGLWidget(QGLFormat(QGL::SampleBuffers), this));
+    view->setFixedSize(WIDTH + 2, HEIGHT + 2);
+
+    setWindowFlags(Qt::FramelessWindowHint);
+    setWindowOpacity(0.9);
+    setFixedSize(WIDTH + 2, HEIGHT + 2);
+    setCentralWidget(view);
+
+    connect(controller, SIGNAL(close()), this, SLOT(close()));
+}
+
+MainWindow::~MainWindow()
+{
+}
+#include "roaditem.h"
+
+roadItem::roadItem(int ID, QGraphicsObject *parent) : QGraphicsObject(parent)
+{
+    id = ID;
+}
+
+QRectF roadItem::boundingRect() const
+{
+    if (1 == id)
+        return QRectF(0, ROAD_YVALUE, WIDTH, ROAD_HEIGHT);
+    else
+        return QRectF(WIDTH - 2, ROAD_YVALUE, WIDTH, ROAD_HEIGHT);
+}
+
+void roadItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
+    if (1 == id)
+    {
+        painter->save();
+        painter->drawImage(QRectF(0, ROAD_YVALUE, WIDTH, ROAD_HEIGHT), QImage(":/resource/Resource/roadMove.png"));
+        painter->restore();
+    }
+    else
+    {
+        painter->save();
+        painter->drawImage(QRectF(WIDTH - 2, ROAD_YVALUE, WIDTH, ROAD_HEIGHT), QImage(":/resource/Resource/roadMove.png"));
+        painter->restore();
+    }
+}
+
+void roadItem::beginMove()
+{
+    animation = new QPropertyAnimation(this, "pos");
+
+    if (id == 1)
+    {
+        animation->setDuration(ROAD_TIME);
+        animation->setStartValue(pos());
+        animation->setEndValue(QPoint(pos().x()-WIDTH, pos().y()));
+        animation->start();
+        connect(animation, SIGNAL(finished()), this, SLOT(rebegin()));
+    }
+    else
+    {
+        animation->setDuration(ROAD_TIME * 2);
+        animation->setStartValue(QPoint(pos().x() - 2, pos().y()));
+        animation->setEndValue(QPoint(pos().x() - WIDTH * 2, pos().y()));
+        animation->setLoopCount(-1);
+        animation->start();
+    }
+}
+
+void roadItem::rebegin()
+{
+    disconnect(animation, SIGNAL(finished()), this, SLOT(rebegin()));
+    animation->setDuration(ROAD_TIME * 2);
+    animation->setStartValue(QPoint(pos().x() + WIDTH * 2 - 7, pos().y()));
+    animation->setEndValue(pos());
+    animation->setLoopCount(-1);
+    animation->start();
+}
+
+void roadItem::stopMove()
+{
+    setPos(0, 0);
+    animation->stop();
+}
+
+#include "barrier.h"
+
+barrier::barrier()
+{
+    is_addScore = false;
+    QTime time = QTime::currentTime();
+    qsrand(time.msec() + time.second() * 1000);
+    height = qrand() % 161+ 50;
+    height2 = 274 - height;
+    width = 40;
+    beginMove();
+}
+
+QRectF barrier::boundingRect() const
+{
+    return QRectF(WIDTH, 0, width, HEIGHT);
+}
+
+void barrier::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
+
+    painter->save();
+
+    painter->drawImage(QRectF(WIDTH, 0, width, height), QImage(":/resource/Resource/pipe1.png"));
+
+    painter->drawImage(QRectF(WIDTH, height + 110, width, height2), QImage(":/resource/Resource/pipe2.png").scaled(width, height2));
+    painter->restore();
+
+    if (!is_addScore && pos().x() < -190)
+    {
+        is_addScore = true;
+        emit add_Score();
+    }
+}
+
+QPainterPath barrier::shape() const
+{
+    QPainterPath path;
+    
+    path.addRect(QRectF(WIDTH, 0, width, height));
+    path.addRect(QRectF(WIDTH, height + 125, width, height2));
+    return path;
+}
+
+void barrier::beginMove()
+{
+    animation = new QPropertyAnimation(this, "pos");
+    animation->setDuration(BARRIER_TIME);
+    animation->setStartValue(pos());
+    animation->setEndValue(QPoint(pos().x() - WIDTH - 50, pos().y()));
+    animation->start();
+}
+
+barrier::~barrier()
+{
+}
+#include "baidu.h"
+#include "ui_baidu.h"
+#include "sousuo.h"
+#include "ui_sousuo.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+
+baidu::baidu(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::baidu)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+baidu::~baidu()
+{
+    delete ui;
+}
+
+void baidu::on_pushButton_2_clicked()
+{
+    sousuo *a=new sousuo(this);
+    this->close();
+    a->show();
+}
+
+void baidu::on_pushButton_clicked()
+{
+    dialog4 *a=new dialog4(this);
+    this->close();
+    a->show();
+}
+#include "beijing.h"
+#include "ui_beijing.h"
+#include "dialog1.h"
+#include "ui_dialog1.h"
+#include "mima.h"
+#include "ui_mima.h"
+#include "kaishi.h"
+#include "ui_kaishi.h"
+
+beijing::beijing(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::beijing)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+beijing::~beijing()
+{
+    delete ui;
+}
+
+void beijing::on_pushButton_clicked()
+{
+    kaishi *a=new kaishi(this);
+    this->close();
+    a->show();
+}
+#include "bohao.h"
+#include "ui_bohao.h"
+#include "tonghua4.h"
+#include "ui_tonghua4.h"
+#include "tonghua5.h"
+#include "ui_tonghua5.h"
+#include "tonghua3.h"
+#include "ui_tonghua3.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "shilian.h"
+#include "ui_shilian.h"
+#include<QDebug>
+
+extern int zhengju[4];
+char* bohao::password=new char[4];
+int bohao::i=0;
+char* bohao::number=new char[4];
+
+bohao::bohao(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::bohao)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+ui->label->hide();
+
+}
+
+bohao::~bohao()
+{
+
+}
+
+void bohao::on_pushButton_clicked()
+{
+
+    password[i]=1;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_2_clicked()
+{
+
+    password[i]=2;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_3_clicked()
+{
+
+    password[i]=3;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_4_clicked()
+{
+
+    password[i]=4;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_5_clicked()
+{
+
+    password[i]=5;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_6_clicked()
+{
+
+    password[i]=6;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_7_clicked()
+{
+
+    password[i]=7;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_8_clicked()
+{
+
+    password[i]=8;
+      qDebug()<<"2";
+    
+    qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_9_clicked()
+{
+
+    password[i]=9;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_10_clicked()
+{
+
+    password[i]=0;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void bohao::on_pushButton_11_clicked()
+{
+    tonghua4*c=new tonghua4(this);
+     tonghua3*b=new tonghua3(this);
+    tonghua5*a=new tonghua5(this);
+       if(number[0]=='1'&&number[1]=='1'&&number[2]=='0'&&number[3]=='\0')
+      {
+           if(zhengju[0]==1&&zhengju[1]==2&&zhengju[2]==3&&zhengju[3]==4)
+           {
+           this->close();
+           b->show();
+           i=0;
+           number[0]='\0';
+           ui->lineEdit->setText(number);
+           }
+           else{
+               this->close();
+               c->show();
+               i=0;
+               number[0]='\0';
+ui->lineEdit->setText(number);
+
+           }
+
+       }
+    if(number[0]=='4'&&number[1]=='5'&&number[2]=='8'&&number[3]=='7')
+       {
+          if(zhengju[0]==1&&zhengju[1]==2&&zhengju[2]==3&&zhengju[3]==4){
+        this->close();
+        a->show();
+           i=0;
+           number[0]='\0';
+ui->lineEdit->setText(number);}
+          else{  i=0;
+              number[0]='\0';
+   ui->lineEdit->setText(number);}
+       }
+}
+
+void bohao::on_pushButton_14_clicked()
+{
+    dialog5 *a=new dialog5(this);
+    this->hide();
+    a->show();
+}
+#include "dialog1.h"
+#include "ui_dialog1.h"
+#include "tonghua2.h"
+#include "ui_tonghua2.h"
+#include "shilian.h"
+#include "ui_shilian.h"
+#include<QDebug>
+
+char* Dialog1::password=new char[4];
+int Dialog1::i=0;
+char* Dialog1::number=new char[4];
+Dialog1::Dialog1(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::Dialog1)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+
+}
+
+Dialog1::~Dialog1()
+{
+
+
+}
+
+
+
+void Dialog1::on_pushButton_13_clicked()
+{
+tonghua2*a=new tonghua2(this);
+   if(number[0]=='1'&&number[1]=='1'&&number[2]=='0'&&number[3]=='\0')
+  {
+       this->close();
+       a->show();
+
+   }
+
+else
+   {
+       i=0;
+       number[0]='\0';
+       ui->lineEdit->setText(number);
+   }
+
+}
+
+void Dialog1::on_pushButton_1_clicked()
+{
+
+    password[i]=1;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void Dialog1::on_pushButton_2_clicked()
+{
+
+    password[i]=2;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void Dialog1::on_pushButton_3_clicked()
+{
+
+    password[i]=3;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_4_clicked()
+{
+
+    password[i]=4;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_5_clicked()
+{
+
+    password[i]=5;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_6_clicked()
+{
+
+    password[i]=6;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_7_clicked()
+{
+
+    password[i]=7;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_8_clicked()
+{
+
+    password[i]=8;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+void Dialog1::on_pushButton_9_clicked()
+{
+    password[i]=9;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+
+void Dialog1::on_pushButton_11_clicked()
+{
+
+    password[i]=0;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+
+}
+
+
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+#include "xinxi.h"
+#include "ui_xinxi.h"
+#include "baidu.h"
+#include "ui_baidu.h"
+#include "weixin.h"
+#include "ui_weixin.h"
+#include "bohao.h"
+#include "ui_bohao.h"
+#include "yinyue.h"
+#include "ui_yinyue.h"
+#include "weixindenglu.h"
+#include "ui_weixindenglu.h"
+#include "renwuban.h"
+#include "ui_renwuban.h"
+#include "shezhi.h"
+#include "ui_shezhi.h"
+#include "renwu1.h"
+#include "ui_renwu1.h"
+#include<QTimer>
+#include<QTime>
+#include<stdlib.h>
+#include "laidian4587.h"
+#include "ui_laidian4587.h"
+extern int xiansuo[4];
+dialog4::dialog4(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::dialog4)
+{
+  ui->setupUi(this);
+       setFixedSize(this->width(),this->height());
+
+}
+
+dialog4::~dialog4()
+{
+    delete ui;
+}
+
+
+
+void dialog4::on_pushButton_6_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->close();
+    a->show();
+
+}
+
+void dialog4::on_pushButton_3_clicked()
+{
+    weixindenglu *a=new weixindenglu(this);
+    this->close();
+    a->show();
+}
+
+void dialog4::on_pushButton_7_clicked()
+{
+    xinxi *a=new xinxi(this);
+    this->close();
+    a->show();
+}
+
+void dialog4::on_pushButton_4_clicked()
+{
+    bohao *a=new bohao(this);
+    this->close();
+    a->show();
+}
+
+void dialog4::on_pushButton_9_clicked()
+{
+    yinyue *a=new yinyue(this);
+    this->close();
+    a->show();
+}
+
+void dialog4::on_pushButton_11_clicked()
+{
+    if(xiansuo[0]==1&&xiansuo[1]==2&&xiansuo[2]==3&&xiansuo[3]==4)
+    {
+        renwu1 *a=new renwu1(this);
+this->close();
+ a->show();
+    }
+    else{
+            renwuban *a=new renwuban(this);
+    this->close();
+     a->show();}
+}
+
+void dialog4::on_pushButton_10_clicked()
+{
+    shezhi *a=new shezhi(this);
+      this->close();
+       a->show();
+}
+
+void dialog4::on_pushButton_8_clicked()
+{
+    baidu *a=new baidu(this);
+      this->close();
+       a->show();
+}
+
+void dialog4::on_pushButton_12_clicked()
+{
+    system("FlappyBird.exe");
+
+}
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "bohao.h"
+#include "ui_bohao.h"
+#include<QTimer>
+#include<QTime>
+#include "laidian4587.h"
+#include "ui_laidian4587.h"
+
+QTimer *s=new QTimer();
+dialog5::dialog5(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::dialog5)
+{
+    ui->setupUi(this);
+         setFixedSize(this->width(),this->height());
+       connect(s,&QTimer::timeout,this,&dialog5::show1);
+       s->start(600);
+  }
+
+dialog5::~dialog5()
+{
+    delete ui;
+}
+
+void dialog5::on_pushButton_clicked()
+{
+bohao *a=new bohao(this);
+    this->hide();
+    a->show();
+}
+void dialog5::show1()
+{
+    laidian4587 *a=new laidian4587(this);
+   this->hide();
+   a->show();
+delete s;}
+#include "dialog6.h"
+#include "ui_dialog6.h"
+#include "ending1.h"
+#include "ui_ending1.h"
+#include<QTimer>
+#include<QTime>
+#include "laidian4587.h"
+#include "ui_laidian4587.h"
+
+QTimer *s1=new QTimer();
+dialog6::dialog6(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::dialog6)
+{
+    ui->setupUi(this);
+         setFixedSize(this->width(),this->height());
+       connect(s1,&QTimer::timeout,this,&dialog6::show1);
+       s1->start(2600);
+  }
+
+dialog6::~dialog6()
+{
+    delete ui;
+}
+
+
+
+void dialog6::show1()
+{
+    laidian4587 *a=new laidian4587(this);
+   this->hide();
+   a->show();
+delete s1;}
+#include "dialog7.h"
+#include "ui_dialog7.h"
+#include "bohao.h"
+#include "ui_bohao.h"
+#include<QTimer>
+#include<QTime>
+#include "laidian4587.h"
+#include "ui_laidian4587.h"
+#include<QMediaplayer>
+QMediaPlayer *weng22;
+QTimer *i1=new QTimer();
+ QTimer *i2=new QTimer();
+QTimer *i3=new QTimer();
+QTimer *i4=new QTimer();
+QTimer *i5=new QTimer();
+QTimer *s2=new QTimer();
+dialog7::dialog7(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::dialog7)
+{
+    ui->setupUi(this);
+         setFixedSize(this->width(),this->height());
+         ui->label_2->hide();
+         ui->label_3->hide();
+         ui->label_4->hide();
+       connect(s2,&QTimer::timeout,this,&dialog7::show1);
+       connect(i1,&QTimer::timeout,this,&dialog7::weng1);
+       connect(i2,&QTimer::timeout,this,&dialog7::weng2);
+       connect(i3,&QTimer::timeout,this,&dialog7::weng3);
+       connect(i4,&QTimer::timeout,this,&dialog7::weng4);
+        connect(i5,&QTimer::timeout,this,&dialog7::weng5);
+       i1->start(1000);
+   i2->start(4000);
+   i4->start(5000);
+i3->start(8000);
+i5->start(11000);
+       s2->start(15000);
+  }
+
+dialog7::~dialog7()
+{
+    delete ui;
+}
+
+
+void dialog7::show1()
+{
+    laidian4587 *a=new laidian4587(this);
+   this->hide();
+   a->show();
+delete s2;}
+void dialog7::weng1()
+{
+    weng22=new QMediaPlayer();
+    weng22->setMedia(QUrl::fromLocalFile("../untitled47/4.mp3"));
+    weng22->play();
+    ui->label_2->setVisible (true);
+     delete i1;
+
+}
+void dialog7::weng2()
+{
+     ui->label_2->hide();
+
+     delete i2;
+}
+void dialog7::weng4()
+{
+    ui->label_3->setVisible (true);
+    delete i4;
+}
+
+void dialog7::weng3()
+{
+    ui->label_3->hide();
+    ui->label_4->setVisible(true);
+delete i3;
+}
+void dialog7::weng5()
+{
+    ui->label_4->hide();
+}
+#include "ending1.h"
+#include "ui_ending1.h"
+#include<QTimer>
+#include<QTime>
+QTimer *e11=new QTimer();
+QTimer *e12=new QTimer();
+ending1::ending1(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::ending1)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_3->hide();
+    ui->label_4->hide();
+
+
+       qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+       connect(e11,&QTimer::timeout,this,&ending1::wordshow1);
+       connect(e12,&QTimer::timeout,this,&ending1::wordshow2);
+
+       e11->start(1000);
+   e12->start(2000);
+
+}
+
+ending1::~ending1()
+{
+    delete ui;
+}
+void ending1::wordshow1()
+{
+    ui->label_3->setVisible(true);
+    delete e11;
+}
+void ending1::wordshow2()
+{
+    ui->label_4->setVisible(true);
+    delete e12;
+}
+#include "ending2.h"
+#include "ui_ending2.h"
+#include<QTimer>
+#include<QTime>
+QTimer *e21=new QTimer();
+QTimer *e22=new QTimer();
+ending2::ending2(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::ending2)
+{
+    ui->setupUi(this);
+    ui->label_7->hide();
+    ui->label_4->hide();
+    ui->label_5->hide();
+    ui->label_6->hide();
+
+       qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+       connect(e21,&QTimer::timeout,this,&ending2::wordshow1);
+       connect(e22,&QTimer::timeout,this,&ending2::wordshow2);
+
+       e21->start(2000);
+   e22->start(5000);
+}
+
+ending2::~ending2()
+{
+    delete ui;
+}
+void ending2::wordshow1()
+{
+    ui->label_4->setVisible(true);
+    ui->label_5->setVisible(true);
+    delete e21;
+}
+void ending2::wordshow2()
+{
+    ui->label_7->setVisible(true);
+    ui->label_6->setVisible(true);
+    delete e22;
+}
+#include "ending3.h"
+#include "ui_ending3.h"
+#include<QTimer>
+#include<QTime>
+QTimer *e31=new QTimer();
+QTimer *e32=new QTimer();
+ending3::ending3(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::ending3)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_3->hide();
+    ui->label_4->hide();
+    ui->label_5->hide();
+    ui->label_6->hide();
+
+       qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+       connect(e31,&QTimer::timeout,this,&ending3::wordshow1);
+       connect(e32,&QTimer::timeout,this,&ending3::wordshow2);
+
+       e31->start(2000);
+   e32->start(5000);
+
+}
+
+ending3::~ending3()
+{
+    delete ui;
+}
+void ending3::wordshow1()
+{
+    ui->label_4->setVisible(true);
+    ui->label_3->setVisible(true);
+    delete e31;
+}
+void ending3::wordshow2()
+{
+    ui->label_5->setVisible(true);
+    ui->label_6->setVisible(true);
+    delete e32;
+}
+#include "kaishi.h"
+#include "ui_kaishi.h"
+#include "mima.h"
+#include "ui_mima.h"
+#include<QTimer>
+#include<QTime>
+#include<QDebug>
+#include<QMediaplayer>
+QMediaPlayer *weng;
+QTimer *id1=new QTimer();
+ QTimer *id2=new QTimer();
+QTimer *id3=new QTimer();
+QTimer *id4=new QTimer();
+kaishi::kaishi(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::kaishi)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    QTimer *timer=new QTimer(this);
+       connect(timer,&QTimer::timeout,this,&kaishi::timerUpdate);
+       timer->start();
+
+       qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+       ui->label_2->setVisible (false);
+       ui->label_3->setVisible (false);
+ui->pushButton->setVisible (false);
+           connect(id1,&QTimer::timeout,this,&kaishi::weng1);
+           connect(id2,&QTimer::timeout,this,&kaishi::weng2);
+           connect(id3,&QTimer::timeout,this,&kaishi::weng3);
+           connect(id4,&QTimer::timeout,this,&kaishi::weng4);
+           id1->start(6000);
+       id2->start(9000);
+       id4->start(10000);
+id3->start(20000);
+
+}
+
+kaishi::~kaishi()
+{
+    delete ui;
+}
+void kaishi ::timerUpdate()
+{
+    QTime time = QTime :: currentTime();
+    QString text =time.toString("hh:mm");
+    if((time.second()%4)==0 )text[2]=' ';
+    ui->lcdNumber->display(text);
+}
+void kaishi::on_pushButton_clicked()
+{
+    mima *a=new mima(this);
+    this->close();
+    a->show();
+}
+void kaishi::weng1()
+{
+    weng=new QMediaPlayer();
+    weng->setMedia(QUrl::fromLocalFile("D:/5.11.1/untitled47/4.mp3"));
+    weng->play();
+    ui->label_2->setVisible (true);
+     delete id1;
+
+}
+void kaishi::weng2()
+{
+     ui->label_2->hide();
+
+     delete id2;
+}
+void kaishi::weng4()
+{
+    ui->label_3->setVisible (true);
+    delete id4;
+}
+
+void kaishi::weng3()
+{
+    ui->label_3->hide();
+    ui->pushButton->setVisible(true);
+}
+#include "kiss.h"
+#include "ui_kiss.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+
+kiss::kiss(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::kiss)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+kiss::~kiss()
+{
+    delete ui;
+}
+
+void kiss::on_pushButton_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->hide();
+    a->show();
+}
+#include "laidian4587.h"
+#include "ui_laidian4587.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "xian4587.h"
+#include "ui_xian4587.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "dialog6.h"
+#include "ui_dialog6.h"
+#include "dialog7.h"
+#include "ui_dialog7.h"
+#include "ending1.h"
+#include "ui_ending1.h"
+#include<QMediaPlaylist>
+ QMediaPlaylist *playlist1;
+ QMediaPlayer *player1;
+ int flag1=0;
+laidian4587::laidian4587(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::laidian4587)
+{
+
+             ui->setupUi(this);
+             player1=new QMediaPlayer(this);
+                 playlist1= new QMediaPlaylist;
+                 playlist1->addMedia(QUrl::fromLocalFile("../untitled47/5.mp3"));
+                 playlist1->setCurrentIndex(0);
+                 playlist1->setPlaybackMode(QMediaPlaylist::Loop);
+                 player1->setPlaylist(playlist1);
+                 player1->play();
+
+}
+
+laidian4587::~laidian4587()
+{
+    delete ui;
+}
+
+void laidian4587::on_pushButton_2_clicked()
+{
+    xian4587 *a=new xian4587(this);
+    player1->stop();
+    this->hide();
+    a->show();
+
+}
+
+
+
+void laidian4587::on_pushButton_clicked()
+{
+    flag1++;
+    if(flag1==1)
+    {
+dialog6 *a=new dialog6(this);
+player1->stop();
+    this->hide();
+   a->show();}
+    if(flag1==2)
+    {
+
+    dialog7 *a=new dialog7(this);
+    player1->stop();
+        this->hide();
+       a->show();}
+
+if(flag1==3)
+{
+
+ending1 *a=new ending1(this);
+player1->stop();
+    this->hide();
+   a->show();}
+}
+#include "mainwindow.h"
+#include <QApplication>
+
+int main(int argc, char *argv[])
+{
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
+
+    return a.exec();
+}
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "dialog1.h"
+#include "ui_dialog1.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "beijing.h"
+#include "ui_beijing.h"
+#include<QMediaPlaylist>
+QMediaPlayer *player;
+    QMediaPlaylist *playlist;
+    int zhengju[4]={9,9,9,9};
+    int xiansuo[4]={9,9,9,9};
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+    player=new QMediaPlayer(this);
+        playlist= new QMediaPlaylist;
+        playlist->addMedia(QUrl::fromLocalFile("../untitled47/1.mp3"));
+        playlist->addMedia(QUrl::fromLocalFile("../untitled47/2.mp3"));
+        playlist->addMedia(QUrl::fromLocalFile("../untitled47/3.mp3"));
+        playlist->setCurrentIndex(0);
+        playlist->setPlaybackMode(QMediaPlaylist::Loop);
+        player->setPlaylist(playlist);
+        player->play();
+
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+   beijing *a=new beijing(this);
+   this->close();
+   a->show();
+}
+
+
+
+
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    dialog4 *a=new dialog4(this);
+        this->hide();
+        a->show();
+}
+#include "mary2.h"
+#include "ui_mary2.h"
+#include "xinxi.h"
+#include "ui_xinxi.h"
+
+mary2::mary2(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::mary2)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+mary2::~mary2()
+{
+    delete ui;
+}
+
+void mary2::on_pushButton_clicked()
+{
+    xinxi *a=new xinxi(this);
+    this->hide();
+    a->show();
+}
+#include "mima.h"
+#include "ui_mima.h"
+#include "dialog1.h"
+#include "ui_dialog1.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include <QtGui>
+#include "kaishi.h"
+#include "ui_kaishi.h"
+#include<QTimer>
+#include<QTime>
+#include<QDebug>
+#include<QMediaplayer>
+#include "ui_mima.h"
+int* mima::password=new int[4];
+int mima::i=0;
+QMediaPlayer *weng11;
+QTimer *id11=new QTimer();
+ QTimer *id22=new QTimer();
+QTimer *id33=new QTimer();
+QTimer *id44=new QTimer();
+mima::mima(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::mima)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_2->hide();
+    ui->label_3->hide();
+    QTimer *timer=new QTimer(this);
+       connect(timer,&QTimer::timeout,this,&mima::timerUpdate);
+       timer->start();
+
+       qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+       connect(id11,&QTimer::timeout,this,&mima::weng1);
+       connect(id22,&QTimer::timeout,this,&mima::weng2);
+       connect(id33,&QTimer::timeout,this,&mima::weng3);
+       connect(id44,&QTimer::timeout,this,&mima::weng4);
+       id11->start(1000);
+   id22->start(4000);
+   id44->start(5000);
+id33->start(10000);
+}
+
+mima::~mima()
+{
+    delete ui;
+}
+void mima::on_pushButton_1_clicked(  )
+{
+
+    password[i]=1;
+    qDebug()<<"1";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+ dialog5 *a=new dialog5(this);
+        this->close();
+        a->show();
+}
+}
+
+void mima::on_pushButton_2_clicked( )
+{
+    password[i]=2;
+    qDebug()<<"2";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+   }
+
+void mima::on_pushButton_3_clicked( )
+{     password[i]=3;
+      qDebug()<<"3";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+     i++;
+      if(i==4)i=0;
+      if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+      {qDebug()<<"hahhaha";
+          dialog5 *a=new dialog5(this);
+                 this->close();
+                 a->show();
+  }
+
+   }
+
+void mima::on_pushButton_4_clicked( )
+{   password[i]=4;
+    qDebug()<<"4";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+
+
+}
+
+void mima::on_pushButton_5_clicked()
+{
+    password[i]=5;
+    qDebug()<<"5";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+}
+
+void mima::on_pushButton_6_clicked( )
+{
+    password[i]=6;
+    qDebug()<<"6";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+}
+
+void mima::on_pushButton_7_clicked( )
+{   password[i]=7;
+    qDebug()<<"7";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+}
+
+void mima::on_pushButton_8_clicked()
+{
+    password[i]=8;
+    qDebug()<<"8";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+  
+             this->close();
+               a->show();
+}
+
+}
+
+void mima::on_pushButton_9_clicked()
+{
+    password[i]=9;
+    qDebug()<<"9";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+}
+
+void mima::on_pushButton_10_clicked()
+{
+    password[i]=0;
+    qDebug()<<"0";
+      qDebug()<<*password;
+      qDebug()<<"i="<<i;
+   i++;
+    if(i==4)i=0;
+    if(password[0]==0&&password[1]==6&&password[2]==1&&password[3]==9)
+    {qDebug()<<"hahhaha";
+        dialog5 *a=new dialog5(this);
+               this->close();
+               a->show();
+}
+
+
+}
+
+
+
+void mima::on_pushButton_11_clicked()
+{
+    Dialog1 *a=new Dialog1(this);
+    this->close();
+    a->show();
+}
+
+void mima::timerUpdate()
+{
+    QTime time = QTime :: currentTime();
+    QString text =time.toString("hh:mm");
+    if((time.second()%4)==0 )text[2]=' ';
+    ui->lcdNumber->display(text);
+}
+void mima::weng1()
+{
+    weng11=new QMediaPlayer();
+    weng11->setMedia(QUrl::fromLocalFile("../untitled47/4.mp3"));
+    weng11->play();
+    ui->label_2->setVisible (true);
+     delete id11;
+
+}
+void mima::weng2()
+{
+     ui->label_2->hide();
+
+     delete id22;
+}
+void mima::weng4()
+{
+    ui->label_3->setVisible (true);
+    delete id44;
+}
+
+void mima::weng3()
+{
+    ui->label_3->hide();
+
+}
+#include "mom.h"
+#include "ui_mom.h"
+#include "xinxi.h"
+#include "ui_xinxi.h"
+extern int xiansuo[4];
+mom::mom(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::mom)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label->hide();
+
+}
+
+mom::~mom()
+{
+    delete ui;
+}
+
+void mom::on_pushButton_clicked()
+{
+    xinxi *a=new xinxi(this);
+    this->hide();
+    a->show();
+}
+
+void mom::on_pushButton_2_clicked()
+{
+    xiansuo[2]=3;
+    ui->label->setVisible(true);
+}
+#include "onefourthreethree.h"
+#include "ui_onefourthreethree.h"
+#include "xinxi.h"
+#include "ui_xinxi.h"
+extern int xiansuo[4];
+onefourthreethree::onefourthreethree(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::onefourthreethree)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label->hide();
+
+}
+
+onefourthreethree::~onefourthreethree()
+{
+    delete ui;
+}
+
+void onefourthreethree::on_pushButton_clicked()
+{
+    xinxi *a=new xinxi(this);
+    this->hide();
+    a->show();
+}
+
+void onefourthreethree::on_pushButton_2_clicked()
+{
+    xiansuo[3]=4;
+    ui->label->setVisible(true);
+}
+#include "renwu1.h"
+#include "ui_renwu1.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+renwu1::renwu1(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::renwu1)
+{
+    ui->setupUi(this);
+}
+
+renwu1::~renwu1()
+{
+    delete ui;
+}
+
+void renwu1::on_pushButton_clicked()
+{
+    dialog4 *a=new dialog4(this);
+         this->close();
+         a->show();
+}
+#include "renwuban.h"
+#include "ui_renwuban.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+extern int xiansuo[4];
+renwuban::renwuban(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::renwuban)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_9->hide();
+     ui->label_10->hide();
+      ui->label_11->hide();
+       ui->label_12->hide();
+if(xiansuo[0]==1)ui->label_9->setVisible(true);
+if(xiansuo[1]==2)ui->label_11->setVisible(true);
+if(xiansuo[2]==3)ui->label_10->setVisible(true);
+if(xiansuo[3]==4)ui->label_12->setVisible(true);
+}
+
+renwuban::~renwuban()
+{
+    delete ui;
+}
+
+void renwuban::on_pushButton_clicked()
+{
+    dialog4 *a=new dialog4(this);
+         this->close();
+         a->show();
+}
+#include "shezhi.h"
+#include "ui_shezhi.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include<QDebug>
+extern int zhengju[6];
+extern int xiansuo[4];
+shezhi::shezhi(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::shezhi)
+{
+    ui->setupUi(this);
+    ui->label->hide();
+}
+
+shezhi::~shezhi()
+{
+    delete ui;
+}
+
+void shezhi::on_pushButton_clicked()
+{
+    xiansuo[0]=1;
+    ui->label->show();
+
+}
+
+void shezhi::on_pushButton_2_clicked()
+{
+    dialog4 *a=new dialog4(this);
+    this->close();
+    a->show();
+}
+#include "shilian.h"
+#include "ui_shilian.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+shilian::shilian(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::shilian)
+{
+    ui->setupUi(this);
+}
+
+shilian::~shilian()
+{
+    delete ui;
+}
+
+void shilian::on_pushButton_clicked()
+{
+    dialog4 *a=new dialog4(this);
+    this->hide();
+    a->show();
+}
+#include "shoukuan.h"
+#include "ui_shoukuan.h"
+
+shoukuan::shoukuan(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::shoukuan)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+shoukuan::~shoukuan()
+{
+    delete ui;
+}
+#include "simi.h"
+#include "ui_simi.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+#include<QDebug>
+#include "kiss.h"
+#include "ui_kiss.h"
+char* simi::password=new char[4];
+int simi::i=0;
+char* simi::number=new char[4];
+simi::simi(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::simi)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+simi::~simi()
+{
+    delete ui;
+}
+
+
+
+void simi::on_pushButton_2_clicked()
+{
+    password[i]=1;
+      qDebug()<<"1";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_3_clicked()
+{
+    password[i]=2;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_4_clicked()
+{
+    password[i]=3;
+      qDebug()<<"3";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_5_clicked()
+{
+    password[i]=4;
+      qDebug()<<"4";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_6_clicked()
+{
+    password[i]=5;
+      qDebug()<<"5";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_7_clicked()
+{
+    password[i]=6;
+      qDebug()<<"6";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_8_clicked()
+{
+    password[i]=7;
+      qDebug()<<"7";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_9_clicked()
+{
+    password[i]=8;
+      qDebug()<<"8";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_10_clicked()
+{
+    password[i]=9;
+      qDebug()<<"9";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_11_clicked()
+{
+    password[i]=0;
+      qDebug()<<"0";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void simi::on_pushButton_clicked()
+{
+    kiss*a=new kiss(this);
+    if(number[0]=='6'&&number[1]=='2'&&number[2]=='7'&&number[3]=='9')
+   {
+        this->close();
+        a->show();
+
+    }
+
+ else
+    {
+        i=0;
+        number[0]='\0';
+        ui->lineEdit->setText(number);
+    }
+}
+
+void simi::on_pushButton_1_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->hide();
+    a->show();
+}
+#include "sousuo.h"
+#include "ui_sousuo.h"
+#include "baidu.h"
+#include "ui_baidu.h"
+extern int zhengju[4];
+sousuo::sousuo(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::sousuo)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label->hide();
+
+}
+
+sousuo::~sousuo()
+{
+    delete ui;
+}
+
+void sousuo::on_pushButton_clicked()
+{
+    baidu *a=new baidu(this);
+    this->close();
+    a->show();
+}
+
+void sousuo::on_pushButton_2_clicked()
+{
+    zhengju[0]=1;
+    ui->label->setVisible(true);
+}
+#include "xinxi.h"
+#include "ui_xinxi.h"
+#include "tom.h"
+#include "ui_tom.h"
+#include "onefourthreethree.h"
+#include "ui_onefourthreethree.h"
+#include "mary1.h"
+#include "ui_mary1.h"
+#include "mary2.h"
+#include "ui_mary2.h"
+#include "mom.h"
+#include "ui_mom.h"
+#include<QDebug>
+extern int zhengju[6];
+tom::tom(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tom)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label->hide();
+
+}
+
+tom::~tom()
+{
+    delete ui;
+}
+
+void tom::on_pushButton_clicked()
+{
+    xinxi*a=new xinxi(this);
+    this->hide();
+    a->show();
+}
+
+void tom::on_pushButton_2_clicked()
+{
+    zhengju[2]=3;
+    ui->label->show();
+    qDebug()<<zhengju[0]<<zhengju[1]<<zhengju[2]<<zhengju[3];
+}
+#include "tonghua1.h"
+#include "ui_tonghua1.h"
+#include "mima.h"
+#include "ui_mima.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+
+  tonghua1::tonghua1(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tonghua1)
+{
+
+
+
+
+         ui->setupUi(this);
+         setFixedSize(this->width(),this->height());
+
+
+
+}
+
+tonghua1::~tonghua1()
+{
+    delete ui;
+}
+
+
+
+
+void tonghua1::on_pushButton_clicked()
+{
+    mima *a=new mima(this);
+    this->close();
+    a->show();
+}
+#include "tonghua2.h"
+#include "ui_tonghua2.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "mima.h"
+#include "ui_mima.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+QTimer *tonghua21=new QTimer();
+QTimer *tonghua22=new QTimer();
+QTimer *tonghua23=new QTimer();
+QTimer *tonghua24=new QTimer();
+tonghua2::tonghua2(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tonghua2)
+{
+
+
+
+             ui->setupUi(this);
+             setFixedSize(this->width(),this->height());
+             ui->label_8->hide();
+             ui->label_9->hide();
+             ui->label_10->hide();
+             ui->label_11->hide();
+             ui->label_12->hide();
+             ui->label_4->hide();
+             ui->label_5->hide();
+             ui->label_6->hide();
+             ui->label_7->hide();
+             qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+             connect(tonghua21,&QTimer::timeout,this,&tonghua2::shuohua1);
+             connect(tonghua22,&QTimer::timeout,this,&tonghua2::shuohua2);
+             connect(tonghua23,&QTimer::timeout,this,&tonghua2::shuohua3);
+             connect(tonghua24,&QTimer::timeout,this,&tonghua2::shuohua4);
+             tonghua21->start(3000);
+             tonghua22->start(6000);
+             tonghua23->start(9000);
+             tonghua24->start(12000);
+
+}
+
+tonghua2::~tonghua2()
+{
+
+}
+
+
+void tonghua2::on_pushButton_clicked()
+{
+mima *a=new mima(this);
+    this->hide();
+    a->show();
+}
+void tonghua2::shuohua1()
+{
+    ui->label_4->setVisible(true);
+     ui->label_5->setVisible(true);
+     delete tonghua21;
+}
+void tonghua2::shuohua2()
+{
+    ui->label_6->setVisible(true);
+     ui->label_7->setVisible(true);
+
+     delete tonghua22;
+}
+void tonghua2::shuohua3()
+{
+    ui->label_8->setVisible(true);
+        ui->label_9->setVisible(true);
+     delete tonghua23;
+}
+void tonghua2::shuohua4()
+{
+    ui->label_10->setVisible(true);
+     ui->label_11->setVisible(true);
+     ui->label_12->setVisible(true);
+
+     delete tonghua24;
+}
+#include "tonghua3.h"
+#include "ui_tonghua3.h"
+#include "ending2.h"
+#include "ui_ending2.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+QTimer *tonghua31=new QTimer();
+QTimer *tonghua32=new QTimer();
+QTimer *tonghua33=new QTimer();
+tonghua3::tonghua3(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tonghua3)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_8->hide();
+    ui->label_9->hide();
+    ui->label_10->hide();
+    ui->label_4->hide();
+    ui->label_5->hide();
+    ui->label_6->hide();
+    ui->label_7->hide();
+    qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+    connect(tonghua31,&QTimer::timeout,this,&tonghua3::shuohua1);
+    connect(tonghua32,&QTimer::timeout,this,&tonghua3::shuohua2);
+    connect(tonghua33,&QTimer::timeout,this,&tonghua3::shuohua3);
+
+    tonghua31->start(3000);
+    tonghua32->start(6000);
+    tonghua33->start(9000);
+
+
+}
+
+tonghua3::~tonghua3()
+{
+    delete ui;
+}
+
+void tonghua3::on_pushButton_clicked()
+{
+    ending2 *a=new ending2(this);
+        this->hide();
+        a->show();
+}
+void tonghua3::shuohua1()
+{
+    ui->label_4->setVisible(true);
+     ui->label_5->setVisible(true);
+      ui->label_10->setVisible(true);
+     delete tonghua31;
+}
+void tonghua3::shuohua2()
+{
+    ui->label_6->setVisible(true);
+     ui->label_7->setVisible(true);
+
+
+     delete tonghua32;
+}
+void tonghua3::shuohua3()
+{
+    ui->label_8->setVisible(true);
+        ui->label_9->setVisible(true);
+     delete tonghua33;
+}
+#include "tonghua4.h"
+#include "ui_tonghua4.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+tonghua4::tonghua4(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tonghua4)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+tonghua4::~tonghua4()
+{
+
+}
+
+void tonghua4::on_pushButton_clicked()
+{
+    dialog4*a=new dialog4(this);
+        this->close();
+        a->show();
+}
+#include "tonghua5.h"
+#include "ui_tonghua5.h"
+#include "ending3.h"
+#include "ui_ending3.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+QTimer *tonghua51=new QTimer();
+QTimer *tonghua52=new QTimer();
+QTimer *tonghua53=new QTimer();
+tonghua5::tonghua5(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tonghua5)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label_8->hide();
+    ui->label_9->hide();
+    ui->label_4->hide();
+    ui->label_5->hide();
+    ui->label_6->hide();
+    ui->label_7->hide();
+    qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+    connect(tonghua51,&QTimer::timeout,this,&tonghua5::shuohua1);
+    connect(tonghua52,&QTimer::timeout,this,&tonghua5::shuohua2);
+    connect(tonghua53,&QTimer::timeout,this,&tonghua5::shuohua3);
+    tonghua51->start(3000);
+    tonghua52->start(6000);
+    tonghua53->start(9000);
+    }
+
+    tonghua5::~tonghua5()
+    {
+        delete ui;
+    }
+
+
+
+    void tonghua5::shuohua1()
+    {
+        ui->label_4->setVisible(true);
+         ui->label_5->setVisible(true);
+
+         delete tonghua51;
+    }
+    void tonghua5::shuohua2()
+    {
+        ui->label_6->setVisible(true);
+         ui->label_7->setVisible(true);
+
+
+         delete tonghua52;
+    }
+    void tonghua5::shuohua3()
+    {
+        ui->label_8->setVisible(true);
+            ui->label_9->setVisible(true);
+         delete tonghua53;
+    }
+void tonghua5::on_pushButton_clicked()
+{
+    ending3 *a=new ending3(this);
+        this->hide();
+        a->show();
+}
+#include "tupian2.h"
+#include "ui_tupian2.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+extern int zhengju[4];
+tupian2::tupian2(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tupian2)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+ui->label_2->hide();
+}
+
+tupian2::~tupian2()
+{
+    delete ui;
+}
+
+void tupian2::on_pushButton_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->hide();
+    a->show();
+}
+
+void tupian2::on_pushButton_2_clicked()
+{
+    zhengju[3]=4;
+    ui->label_2->setVisible(true);
+}
+#include "tupian3.h"
+#include "ui_tupian3.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+
+tupian3::tupian3(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tupian3)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+tupian3::~tupian3()
+{
+    delete ui;
+}
+
+void tupian3::on_pushButton_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->hide();
+    a->show();
+}
+#include "tupiian1.h"
+#include "ui_tupiian1.h"
+#include "xiangce.h"
+#include "ui_xiangce.h"
+tupiian1::tupiian1(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::tupiian1)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+tupiian1::~tupiian1()
+{
+    delete ui;
+}
+
+
+
+void tupiian1::on_pushButton_clicked()
+{
+    xiangce *a=new xiangce(this);
+    this->hide();
+    a->show();
+}
+#include "weixin.h"
+#include "ui_weixin.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include<QDebug>
+extern int zhengju[6];
+weixin::weixin(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::weixin)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+    ui->label->hide();
+
+
+}
+
+weixin::~weixin()
+{
+    delete ui;
+}
+
+void weixin::on_pushButton_2_clicked()
+{
+dialog4*a=new dialog4(this);
+    this->hide();
+    a->show();
+}
+
+void weixin::on_pushButton_clicked()
+{
+    zhengju[1]=2;
+    ui->label->show();
+    qDebug()<<zhengju[0]<<zhengju[1]<<zhengju[2]<<zhengju[3];
+}
+#include "weixindenglu.h"
+#include "ui_weixindenglu.h"
+#include "weixin.h"
+#include "ui_weixin.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include<QDebug>
+
+extern int xiansuo[4];
+char* weixindenglu::password=new char[4];
+int weixindenglu::i=0;
+char* weixindenglu::number=new char[4];
+int weixindenglu::m=0;
+weixindenglu::weixindenglu(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::weixindenglu)
+{
+    ui->setupUi(this);
+     ui->label->setVisible(false);
+     ui->label_2->hide();
+}
+
+weixindenglu::~weixindenglu()
+{
+    delete ui;
+}
+
+void weixindenglu::on_pushButton_1_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=1;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_2_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=2;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_3_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=3;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_4_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=4;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_5_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=5;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_6_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=6;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_7_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=7;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_8_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=8;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_9_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=9;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_10_clicked()
+{
+    ui->label->setVisible(false);
+    password[i]=0;
+      qDebug()<<"2";
+        qDebug()<<*password;
+        qDebug()<<"i="<<i;
+      i++;
+      for(int j=0;j<=3;++j)
+          number[j]=password[j]+'0';
+      number[i]='\0';
+      ui->lineEdit->setText(number);
+}
+
+void weixindenglu::on_pushButton_11_clicked()
+{
+    ui->label->setVisible(false);
+    m=m+1;
+    weixin*a=new weixin(this);
+    if(m>=3)
+   {
+       ui->label->setVisible(true);
+   }
+       if(number[0]=='0'&&number[1]=='5'&&number[2]=='2'&&number[3]=='8')
+      {
+           this->close();
+           a->show();
+
+       }
+
+    else
+       {
+           i=0;
+           number[0]='\0';
+           ui->lineEdit->setText(number);
+       }
+}
+
+void weixindenglu::on_pushButton_clicked()
+{
+    xiansuo[1]=2;
+    ui->label_2->show();
+
+}
+
+void weixindenglu::on_pushButton_12_clicked()
+{
+    dialog4 *a=new dialog4(this);
+    this->hide();
+    a->show();
+}
+#include "xian4587.h"
+#include "ui_xian4587.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include<QtGui>
+#include<QLabel>
+#include<QMovie>
+#include<QTime>
+#include<QTimer>
+QTimer *tonghua01=new QTimer();
+QTimer *tonghua02=new QTimer();
+QTimer *tonghua03=new QTimer();
+QTimer *tonghua04=new QTimer();
+xian4587::xian4587(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::xian4587)
+{
+             ui->setupUi(this);
+             setFixedSize(this->width(),this->height());
+             ui->label_8->hide();
+             ui->label_9->hide();
+             ui->label_10->hide();
+             ui->label_11->hide();
+             ui->label_12->hide();
+             ui->label_13->hide();
+             ui->label_14->hide();
+             ui->label_15->hide();
+             ui->label_16->hide();
+             ui->label_17->hide();
+             ui->label_18->hide();
+             ui->label_19->hide();
+             ui->label_20->hide();
+             ui->label_21->hide();
+
+             qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
+             connect(tonghua01,&QTimer::timeout,this,&xian4587::shuohua1);
+             connect(tonghua02,&QTimer::timeout,this,&xian4587::shuohua2);
+             connect(tonghua03,&QTimer::timeout,this,&xian4587::shuohua3);
+             connect(tonghua04,&QTimer::timeout,this,&xian4587::shuohua4);
+             tonghua01->start(3000);
+             tonghua02->start(6000);
+             tonghua03->start(7000);
+             tonghua04->start(10000);
+}
+
+xian4587::~xian4587()
+{
+    delete ui;
+}
+
+void xian4587::on_pushButton_clicked()
+{
+dialog4 *a=new dialog4(this);
+    this->hide();
+    a->show();
+}
+void xian4587::shuohua1()
+{
+    ui->label_8->setVisible(true);
+     ui->label_9->setVisible(true);
+     delete tonghua01;
+}
+void xian4587::shuohua2()
+{
+    ui->label_10->setVisible(true);
+     ui->label_11->setVisible(true);
+     ui->label_12->setVisible(true);
+     ui->label_13->setVisible(true);
+     ui->label_14->setVisible(true);
+     delete tonghua02;
+}
+void xian4587::shuohua3()
+{
+    ui->label_15->setVisible(true);
+     delete tonghua03;
+}
+void xian4587::shuohua4()
+{
+    ui->label_16->setVisible(true);
+     ui->label_17->setVisible(true);
+     ui->label_18->setVisible(true);
+     ui->label_19->setVisible(true);
+     ui->label_20->setVisible(true);
+     ui->label_21->setVisible(true);
+     delete tonghua04;
+}
+#include "xiangce.h"
+#include "ui_xiangce.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "simi.h"
+#include "ui_simi.h"
+#include "tupiian1.h"
+#include "ui_tupiian1.h"
+#include "tupian2.h"
+#include "ui_tupian2.h"
+#include "tupian3.h"
+#include "ui_tupian3.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+
+
+xiangce::xiangce(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::xiangce)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+xiangce::~xiangce()
+{
+    delete ui;
+}
+
+void xiangce::on_pushButton_clicked()
+{
+dialog4 *a=new dialog4(this);
+     this->close();
+     a->show();
+}
+
+void xiangce::on_pushButton_2_clicked()
+{
+    simi *a=new simi(this);
+     this->close();
+     a->show();
+}
+
+void xiangce::on_pushButton_3_clicked()
+{
+    tupiian1 *a=new tupiian1(this);
+     this->close();
+     a->show();
+}
+
+void xiangce::on_pushButton_4_clicked()
+{
+    tupian2 *a=new tupian2(this);
+     this->close();
+     a->show();
+}
+
+void xiangce::on_pushButton_5_clicked()
+{
+    tupian3 *a=new tupian3(this);
+     this->close();
+     a->show();
+}
+#include "xinxi.h"
+#include "ui_xinxi.h"
+#include "tom.h"
+#include "ui_tom.h"
+#include "onefourthreethree.h"
+#include "ui_onefourthreethree.h"
+#include "mary1.h"
+#include "ui_mary1.h"
+#include "mary2.h"
+#include "ui_mary2.h"
+#include "mom.h"
+#include "ui_mom.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+
+xinxi::xinxi(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::xinxi)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+}
+
+xinxi::~xinxi()
+{
+    delete ui;
+}
+
+void xinxi::on_pushButton_clicked()
+{
+    mom *a=new mom(this);
+    this->hide();
+    a->show();
+}
+
+void xinxi::on_pushButton_2_clicked()
+{
+    tom *a=new tom(this);
+    this->hide();
+    a->show();
+}
+
+void xinxi::on_pushButton_3_clicked()
+{
+    onefourthreethree *a=new onefourthreethree(this);
+    this->hide();
+    a->show();
+}
+
+void xinxi::on_pushButton_4_clicked()
+{
+    mary1 *a=new mary1(this);
+    this->hide();
+    a->show();
+}
+
+void xinxi::on_pushButton_5_clicked()
+{
+    mary2 *a=new mary2(this);
+    this->hide();
+    a->show();
+}
+
+
+
+void xinxi::on_pushButton_6_clicked()
+{
+    dialog4*a=new dialog4(this);
+    this->hide();
+    a->show();
+}
+#include "yinyue.h"
+#include "ui_yinyue.h"
+#include "dialog4.h"
+#include "ui_dialog4.h"
+#include "dialog5.h"
+#include "ui_dialog5.h"
+#include <QtGui>
+#include<QMessageBox>
+#include <QDialog>
+#include<QLineEdit>
+#include<QPushButton>
+#include<QGridLayout>
+#include<QVBoxLayout>
+#include<QHBoxLayout>
+#include<QLabel>
+#include<QMediaplayer>
+#include<mainwindow.h>
+extern QMediaPlayer *player;
+extern QMediaPlaylist *playlist;
+yinyue::yinyue(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::yinyue)
+{
+    ui->setupUi(this);
+    setFixedSize(this->width(),this->height());
+
+    connect(player,&QMediaPlayer::positionChanged,this,&yinyue::updatePosition);
+        connect(player,&QMediaPlayer::stateChanged,this,&yinyue::stateChanged);
+        connect(player,&QMediaPlayer::mediaStatusChanged,this,&yinyue::mediaStatusChanged);
+        connect(player,static_cast<void(QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error),this,&yinyue::showError);
+        connect(player,&QMediaPlayer::metaDataAvailableChanged,this,&yinyue::metaDataAvailableChanged);
+
+
+}
+
+yinyue::~yinyue()
+{
+    delete ui;
+}
+
+void yinyue::on_horizontalSlider_sliderMoved(int position)
+{
+    player->setPosition(position*1000);
+}
+void yinyue::updatePosition(qint64 position)
+{
+    ui->horizontalSlider->setMaximum(player->duration()/1000);
+    ui->horizontalSlider->setValue(position/1000);
+}
+void yinyue::mediaStatusChanged(QMediaPlayer::MediaStatus status)
+{
+    switch(status){
+    case QMediaPlayer::UnknownMediaStatus:
+        ui->label->setText(tr("媒体未知情况"));
+        break;
+    case QMediaPlayer::NoMedia:
+        ui->label->setText(tr("没有媒体文件"));
+        break;
+    case QMediaPlayer::BufferingMedia:
+        ui->label->setText(tr("正在缓冲媒体文件"));
+        break;
+    case QMediaPlayer::BufferedMedia:
+        ui->label->setText(tr("媒体文件缓冲完成"));
+        break;
+    case QMediaPlayer::LoadingMedia:
+        ui->label->setText(tr("正在加载媒体"));
+        break;
+    case QMediaPlayer::StalledMedia:
+        ui->label->setText(tr("播放停滞"));
+        break;
+    case QMediaPlayer::EndOfMedia:
+        ui->label->setText(tr("播放结束"));
+        break;
+    case QMediaPlayer::LoadedMedia:
+        ui->label->setText(tr("媒体加载完成"));
+        break;
+    case QMediaPlayer::InvalidMedia:
+        ui->label->setText(tr("不可用的媒体文件"));
+        break;
+    default: break;
+
+    }
+}
+void yinyue::stateChanged(QMediaPlayer::State state)
+{
+    switch(state){
+    case QMediaPlayer::StoppedState:
+        ui->label->setText(tr("停止状态"));
+        break;
+    case QMediaPlayer::PlayingState:
+        ui->label->setText(tr("播放状态"));
+        break;
+    case QMediaPlayer::PausedState:
+        ui->label->setText(tr("暂停状态"));
+        break;
+    default:break;
+    }
+}
+void yinyue::showError(QMediaPlayer::Error error)
+{
+    switch(error){
+    case QMediaPlayer::NoError:
+        ui->label->setText(tr("没有错误"));
+        break;
+    case QMediaPlayer::ResourceError:
+        ui->label->setText(tr("媒体资源无法被解析"));
+        break;
+    case QMediaPlayer::FormatError:
+        ui->label->setText(tr("不支持该媒体格式"));
+        break;
+    case QMediaPlayer::NetworkError:
+        ui->label->setText(tr("发生了一个网络错误"));
+        break;
+    case QMediaPlayer::AccessDeniedError:
+       ui->label->setText(tr("没有播放权限"));
+        break;
+    case QMediaPlayer::ServiceMissingError:
+        ui->label->setText(tr("没有发现有效的播放服务"));
+        break;
+    default:break;
+    }
+}
+void yinyue::metaDataAvailableChanged(bool available)
+{
+    if(available)
+    {
+            QString title = player->metaData("Title").toString();
+            QString author=player->metaData("Author").toString();
+            setWindowTitle(title+"-"+author);
+    }
+}
+void yinyue::on_pushButton_1_clicked()
+{
+    player->play();
+}
+
+void yinyue::on_pushButton_2_clicked()
+{
+    player->pause();
+}
+
+void yinyue::on_pushButton_3_clicked()
+{
+   player->stop();
+}
+
+
+
+
+void yinyue::on_pushButton_clicked()
+{
+    dialog4*a=new dialog4(this);
+    this->hide();
+    a->show();
+}
